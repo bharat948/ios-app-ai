@@ -1,4 +1,5 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import '../models/user_model.dart';
 
 class AuthService {
@@ -9,6 +10,7 @@ class AuthService {
 
   // Firebase Auth instance
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final GoogleSignIn _googleSignIn = GoogleSignIn();
 
   // Stream of auth state changes
   Stream<User?> get authStateChanges => _auth.authStateChanges();
@@ -74,9 +76,43 @@ class AuthService {
     }
   }
 
+  // Sign in with Google
+  Future<String?> signInWithGoogle() async {
+    try {
+      // Trigger Google Sign-In flow
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      
+      if (googleUser == null) {
+        return 'Google Sign-In was cancelled.';
+      }
+      
+      // Obtain auth details from request
+      final GoogleSignInAuthentication googleAuth = 
+          await googleUser.authentication;
+      
+      // Create credential for Firebase
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+      
+      // Sign in to Firebase with Google credential
+      await _auth.signInWithCredential(credential);
+      
+      return null; // Success
+    } on FirebaseAuthException catch (e) {
+      return _getErrorMessage(e);
+    } catch (e) {
+      return 'Failed to sign in with Google: ${e.toString()}';
+    }
+  }
+
   // Sign out
   Future<void> signOut() async {
-    await _auth.signOut();
+    await Future.wait([
+      _auth.signOut(),
+      _googleSignIn.signOut(),
+    ]);
   }
 
   // Legacy methods for backward compatibility
