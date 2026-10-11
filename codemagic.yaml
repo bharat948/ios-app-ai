@@ -14,6 +14,7 @@ workflows:
         # APPLE_ID: your.email@example.com
         # APP_SPECIFIC_PASSWORD: xxxx-xxxx-xxxx-xxxx
         BUNDLE_ID: "com.example.myIosApp"
+        FBASE_CONFIG: Encrypted(...)  # Add in Codemagic UI - base64 encoded GoogleService-Info.plist
         APP_STORE_CONNECT_ISSUER_ID: Encrypted(...)  # Add in Codemagic UI
         APP_STORE_CONNECT_KEY_IDENTIFIER: Encrypted(...)  # Add in Codemagic UI
         APP_STORE_CONNECT_PRIVATE_KEY: Encrypted(...)  # Add in Codemagic UI
@@ -28,6 +29,17 @@ workflows:
           source: true
     
     scripts:
+      - name: Setup Firebase Config
+        script: |
+          if [ -n "$FBASE_CONFIG" ]; then
+            echo "Setting up Firebase configuration..."
+            echo "$FBASE_CONFIG" | base64 --decode > ios/Runner/GoogleService-Info.plist
+            echo "GoogleService-Info.plist created successfully"
+          else
+            echo "Warning: FBASE_CONFIG environment variable not set"
+            exit 1
+          fi
+      
       - name: Set up code signing settings on Xcode project
         script: |
           xcode-project use-profiles
